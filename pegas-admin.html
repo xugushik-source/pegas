@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PEGAS — Панель владельца</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Yeseva+One&family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --leather:#5C2A24; --leather-dark:#3E1B17; --parchment:#EFE3C8;
+  --parchment-dark:#E3D3AC; --brass:#B8823D; --brass-lt:#D7A85C;
+  --ink:#2B211B; --mu:#8a7a5c; --sage:#8FA06E; --sage-dark:#6E7F4F;
+  --red:#B23B2E; --border:#E3D3AC;
+}
+body{font-family:'Noto Sans',sans-serif;background:var(--parchment);color:var(--ink);min-height:100vh;}
+
+/* ==== PIN GATE ==== */
+#pinGate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:linear-gradient(160deg,var(--leather) 0%,var(--leather-dark) 100%);}
+#pinGate h1{font-family:'Yeseva One',serif;color:var(--parchment);font-size:24px;margin-bottom:6px;}
+#pinGate p{color:rgba(239,227,200,0.6);font-size:12px;margin-bottom:20px;}
+#pinInput{font-size:28px;letter-spacing:10px;text-align:center;width:180px;padding:12px;border-radius:10px;border:none;margin-bottom:14px;}
+#pinBtn{background:var(--sage);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
+#pinErr{color:#ffb4a8;font-size:12px;margin-top:10px;display:none;}
+
+/* ==== APP ==== */
+#app{display:none;max-width:720px;margin:0 auto;padding-bottom:60px;}
+.nav{background:var(--leather-dark);padding:14px 16px;position:sticky;top:0;z-index:10;border-bottom:3px solid var(--brass);}
+.nav h1{font-family:'Yeseva One',serif;color:var(--parchment);font-size:18px;}
+.nav span{color:var(--brass-lt);font-size:11px;}
+
+.tabs{display:flex;gap:8px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border);}
+.tab{flex:1;background:none;border:2px solid var(--border);color:var(--mu);padding:9px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.tab.active{background:var(--leather);border-color:var(--leather);color:#fff;}
+
+.wrap{padding:14px 16px;}
+.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(62,27,23,0.1);}
+
+/* report */
+.range-btns{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.range-btn{background:none;border:2px solid var(--border);color:var(--ink);padding:8px 14px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.range-btn.active{background:var(--sage);border-color:var(--sage);color:#fff;}
+.custom-range{display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:12px;}
+.custom-range input{padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;}
+.stats-row{display:flex;gap:10px;margin-bottom:14px;}
+.stat-box{flex:1;background:var(--parchment);border-radius:8px;padding:12px;text-align:center;}
+.stat-box b{display:block;font-family:'Yeseva One',serif;font-size:22px;color:var(--leather);}
+.stat-box span{font-size:11px;color:var(--mu);}
+.dish-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.dish-row:last-child{border-bottom:none;}
+.dish-qty{background:var(--sage);color:#fff;border-radius:10px;padding:1px 9px;font-weight:700;font-size:12px;}
+
+/* orders list */
+.order-card{border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
+.order-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.order-name{font-weight:700;font-size:14px;}
+.order-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.st-новый{background:#E8F5E9;color:#27AE60;}
+.st-отменён{background:#FBEAE6;color:var(--red);text-decoration:line-through;}
+.st-перенесён{background:#FFF3E0;color:#E65100;}
+.order-meta{font-size:12px;color:var(--mu);margin-bottom:6px;}
+.order-items{font-size:12.5px;margin-bottom:8px;line-height:1.5;}
+.order-btns{display:flex;gap:8px;}
+.order-btns button{flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:700;border:none;cursor:pointer;}
+.btn-cancel{background:var(--red);color:#fff;}
+.btn-reschedule{background:var(--brass);color:#fff;}
+.btn-disabled{background:var(--border);color:var(--mu);cursor:not-allowed;}
+.loading{text-align:center;padding:30px;color:var(--mu);}
+.empty{text-align:center;padding:30px;color:var(--mu);font-size:13px;}
+</style>
+</head>
+<body>
+
+<div id="pinGate">
+  <h1>PEGAS</h1>
+  <p>Панель владельца — введите PIN</p>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+  <button id="pinBtn" onclick="checkPin()">Войти</button>
+  <div id="pinErr">Неверный PIN</div>
+</div>
+
+<div id="app">
+  <div class="nav">
+    <h1>PEGAS <span>· панель владельца</span></h1>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabReportBtn" onclick="switchTab('report')">📊 Отчёты</button>
+    <button class="tab" id="tabOrdersBtn" onclick="switchTab('orders')">📋 Заказы</button>
+  </div>
+
+  <div class="wrap">
+    <!-- REPORT TAB -->
+    <div id="tabReport">
+      <div class="card">
+        <div class="range-btns">
+          <button class="range-btn active" data-range="daily" onclick="loadReport('daily')">Сегодня</button>
+          <button class="range-btn" data-range="weekly" onclick="loadReport('weekly')">Неделя</button>
+          <button class="range-btn" data-range="custom" onclick="showCustomRange()">Свой период</button>
+        </div>
+        <div class="custom-range" id="customRangeBox" style="display:none">
+          <input type="date" id="fromDate"> — <input type="date" id="toDate">
+          <button class="range-btn" onclick="loadReport('custom')">Показать</button>
+        </div>
+        <div id="reportBody"><div class="loading">Загрузка...</div></div>
+      </div>
+    </div>
+
+    <!-- ORDERS TAB -->
+    <div id="tabOrders" style="display:none">
+      <div class="card">
+        <div id="ordersBody"><div class="loading">Загрузка...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ⚠️ ВСТАВИТЬ URL после деплоя Apps Script (тот же, что и в index.html) */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwvEQwFvmHOWG6CD9uPpIeiwvGeUv9bwj0PfG5TVoFwlKUTv-DnqdEa1hbAujio6ThmgA/exec';
+
+var PIN = '';
+
+function checkPin() {
+  var val = document.getElementById('pinInput').value.trim();
+  if (val.length !== 4) return;
+  PIN = val;
+  // проверяем PIN реальным запросом к бэкенду (не только на глаз)
+  fetch(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok) {
+        document.getElementById('pinGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        loadReport('daily');
+      } else {
+        document.getElementById('pinErr').style.display = 'block';
+      }
+    })
+    .catch(function(){
+      document.getElementById('pinErr').textContent = 'Ошибка связи с сервером — проверьте GAS_URL';
+      document.getElementById('pinErr').style.display = 'block';
+    });
+}
+
+function switchTab(tab) {
+  document.getElementById('tabReport').style.display = tab === 'report' ? 'block' : 'none';
+  document.getElementById('tabOrders').style.display = tab === 'orders' ? 'block' : 'none';
+  document.getElementById('tabReportBtn').classList.toggle('active', tab === 'report');
+  document.getElementById('tabOrdersBtn').classList.toggle('active', tab === 'orders');
+  if (tab === 'orders') loadOrders();
+}
+
+function showCustomRange() {
+  document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelector('[data-range="custom"]').classList.add('active');
+  document.getElementById('customRangeBox').style.display = 'flex';
+}
+
+function loadReport(range) {
+  if (range !== 'custom') {
+    document.getElementById('customRangeBox').style.display = 'none';
+    document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('[data-range="' + range + '"]').classList.add('active');
+  }
+  var url = GAS_URL + '?action=report&pin=' + encodeURIComponent(PIN) + '&range=' + range;
+  if (range === 'custom') {
+    var from = document.getElementById('fromDate').value;
+    var to = document.getElementById('toDate').value;
+    if (!from || !to) return;
+    url += '&from=' + from + '&to=' + to;
+  }
+  document.getElementById('reportBody').innerHTML = '<div class="loading">Загрузка...</div>';
+  fetch(url).then(function(r){ return r.json(); }).then(function(data){
+    if (!data.ok) {
+      document.getElementById('reportBody').innerHTML = '<div class="empty">Ошибка: ' + (data.error||'') + '</div>';
+      return;
+    }
+    var html = '<div class="stats-row">';
+    html += '<div class="stat-box"><b>' + data.ordersCount + '</b><span>заказов</span></div>';
+    html += '<div class="stat-box"><b>' + data.totalRevenue + ' ₾</b><span>выручка</span></div>';
+    html += '</div>';
+    if (data.dishes.length === 0) {
+      html += '<div class="empty">За этот период заказов нет</div>';
+    } else {
+      data.dishes.forEach(function(d){
+        html += '<div class="dish-row"><span>' + d.name + '</span><span class="dish-qty">' + d.qty + ' шт.</span></div>';
+      });
+    }
+    document.getElementById('reportBody').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('reportBody').innerHTML = '<div class="empty">Не удалось связаться с сервером</div>';
+  });
+}
+
+function loadOrders() {
+  document.getElementById('ordersBody').innerHTML = '<div class="loading">Загрузка...</div>';
+  fetch(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN)).then(function(r){ return r.json(); }).then(function(data){
+    if (!data.ok || data.orders.length === 0) {
+      document.getElementById('ordersBody').innerHTML = '<div class="empty">Заказов пока нет</div>';
+      return;
+    }
+    var html = '';
+    data.orders.forEach(function(o){
+      var status = o['Статус'] || 'новый';
+      var isFinal = status === 'отменён';
+      html += '<div class="order-card">';
+      html += '  <div class="order-top"><div class="order-name">' + o['Имя'] + '</div><div class="order-status st-' + status + '">' + status + '</div></div>';
+      html += '  <div class="order-meta">' + o['Дата'] + ' ' + o['Время создания'] + ' · забрать в ' + o['Время самовывоза'] + ' · ' + o['Телефон'] + '</div>';
+      html += '  <div class="order-items">' + o['Блюда'] + '</div>';
+      html += '  <div class="order-meta">Итого: <b>' + o['Сумма'] + ' ₾</b>' + (o['Подарок'] ? ' · 🎁 ' + o['Подарок'] : '') + '</div>';
+      html += '  <div class="order-btns">';
+      html += isFinal
+        ? '<button class="btn-disabled" disabled>Уже отменён</button>'
+        : '<button class="btn-cancel" onclick="cancelOrder(\\'' + o['OrderID'] + '\\')">Отменить</button>' +
+          '<button class="btn-reschedule" onclick="rescheduleOrder(\\'' + o['OrderID'] + '\\')">Перенести</button>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    document.getElementById('ordersBody').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('ordersBody').innerHTML = '<div class="empty">Не удалось связаться с сервером</div>';
+  });
+}
+
+function cancelOrder(id) {
+  if (!confirm('Отменить этот заказ?')) return;
+  fetch(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('отменён'))
+    .then(function(r){ return r.json(); })
+    .then(function(){ loadOrders(); });
+}
+
+function rescheduleOrder(id) {
+  var newTime = prompt('Новое время самовывоза (например 14:30):');
+  if (!newTime) return;
+  fetch(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('перенесён') + '&newTime=' + encodeURIComponent(newTime))
+    .then(function(r){ return r.json(); })
+    .then(function(){ loadOrders(); });
+}
+</script>
+</body>
+</html>
