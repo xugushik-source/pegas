@@ -122,13 +122,40 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbwvEQwFvmHOWG6CD9uPpIeiwv
 
 var PIN = '';
 
+
+function jsonpRequest(url) {
+  return new Promise(function(resolve, reject) {
+    var cbName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    var script = document.createElement('script');
+    var timeoutId = setTimeout(function() {
+      cleanup();
+      reject(new Error('timeout'));
+    }, 12000);
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('script load error'));
+    };
+    var sep = url.indexOf('?') === -1 ? '?' : '&';
+    script.src = url + sep + 'callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+
 function checkPin() {
   var val = document.getElementById('pinInput').value.trim();
   if (val.length !== 4) return;
   PIN = val;
   // проверяем PIN реальным запросом к бэкенду (не только на глаз)
-  fetch(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN))
-    .then(function(r){ return r.json(); })
+  jsonpRequest(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN))
     .then(function(data){
       if (data.ok) {
         document.getElementById('pinGate').style.display = 'none';
@@ -172,7 +199,7 @@ function loadReport(range) {
     url += '&from=' + from + '&to=' + to;
   }
   document.getElementById('reportBody').innerHTML = '<div class="loading">Загрузка...</div>';
-  fetch(url).then(function(r){ return r.json(); }).then(function(data){
+  jsonpRequest(url).then(function(data){
     if (!data.ok) {
       document.getElementById('reportBody').innerHTML = '<div class="empty">Ошибка: ' + (data.error||'') + '</div>';
       return;
@@ -196,7 +223,7 @@ function loadReport(range) {
 
 function loadOrders() {
   document.getElementById('ordersBody').innerHTML = '<div class="loading">Загрузка...</div>';
-  fetch(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN)).then(function(r){ return r.json(); }).then(function(data){
+  jsonpRequest(GAS_URL + '?action=list&pin=' + encodeURIComponent(PIN)).then(function(data){
     if (!data.ok || data.orders.length === 0) {
       document.getElementById('ordersBody').innerHTML = '<div class="empty">Заказов пока нет</div>';
       return;
@@ -226,16 +253,14 @@ function loadOrders() {
 
 function cancelOrder(id) {
   if (!confirm('Отменить этот заказ?')) return;
-  fetch(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('отменён'))
-    .then(function(r){ return r.json(); })
+  jsonpRequest(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('отменён'))
     .then(function(){ loadOrders(); });
 }
 
 function rescheduleOrder(id) {
   var newTime = prompt('Новое время самовывоза (например 14:30):');
   if (!newTime) return;
-  fetch(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('перенесён') + '&newTime=' + encodeURIComponent(newTime))
-    .then(function(r){ return r.json(); })
+  jsonpRequest(GAS_URL + '?action=updateStatus&pin=' + encodeURIComponent(PIN) + '&id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent('перенесён') + '&newTime=' + encodeURIComponent(newTime))
     .then(function(){ loadOrders(); });
 }
 </script>
